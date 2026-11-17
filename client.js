@@ -645,37 +645,142 @@ window.__ModuleLoader__.load({
          共用）；悬浮卡片的背景由它自己的规则以
          var(--sidebar-restore-bg, 宿主填充色) 优先取自定义色。
          未设置时这条不生效，背景跟随主题。 */
-      html[data-sidebar-restore-bg] [class*="_sidebarCol"] {
+      /* 注意：真正画出侧栏背景的是内层根容器（hHd-Xa_root），外层布局列
+         只是包着它——只改外层会被内层盖住、看不见变化，两层一起改。 */
+      html[data-sidebar-restore-bg] [class*="_sidebarCol"],
+      html[data-sidebar-restore-bg] [class*="_sidebarCol"] [class*="_root"] {
         background-color: var(--sidebar-restore-bg) !important;
+      }
+
+      /* 自定义文字与图标颜色（1.1.0 补）：宿主侧栏的文字与图标颜色由
+         --dsw-alias-label-* 系列变量驱动（图标多为 currentColor），在
+         根列上改 color 并重定向这组变量即可整列换色；次级文字用
+         color-mix 压透以保持原有的主次层次。悬浮卡片在根列之内，
+         同样生效。未设置时这条不生效。 */
+      html[data-sidebar-restore-fg] [class*="_sidebarCol"] {
+        color: var(--sidebar-restore-fg) !important;
+        --dsw-alias-label-primary: var(--sidebar-restore-fg) !important;
+        --dsw-alias-label-secondary: color-mix(in srgb, var(--sidebar-restore-fg) 70%, transparent) !important;
+        --dsw-alias-label-tertiary: color-mix(in srgb, var(--sidebar-restore-fg) 55%, transparent) !important;
+        --dsw-alias-label-caption: color-mix(in srgb, var(--sidebar-restore-fg) 55%, transparent) !important;
+        --dsw-alias-label-dimmed: color-mix(in srgb, var(--sidebar-restore-fg) 45%, transparent) !important;
+        /* 新建会话按钮自带主题的凸起填充（浅色主题下是纯白），文字色
+           被换成自定义色后会白底白字看不见；把它的填充一并改成自
+           定义色的淡色调，悬停填充同理，按钮始终是可读的浅/深色片。 */
+        --dsw-alias-button-elevated-fill: color-mix(in srgb, var(--sidebar-restore-fg) 14%, transparent) !important;
+        --dsw-alias-button-floating-hover: color-mix(in srgb, var(--sidebar-restore-fg) 22%, transparent) !important;
+      }
+
+      /* 简洁轨道（设置页开关，1.1.0 补）：收起态只保留鲸鱼标志、新建
+         会话、工作区入口与个人头像——中间的面板列表整段隐藏（插件、
+         自动化任务、更多以及其他插件加的面板都在这个列表里）。鲸鱼
+         标志在品牌行、新建会话与头像各有自己的行、工作区入口是插件
+         自己的按钮，都不在面板列表内，不受影响。停靠态不走这条。 */
+      html[data-windows-titlebar][data-sidebar-restore-minimal] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_panelList"] {
+        display: none !important;
+      }
+
+      /* 按面板单独隐藏（设置页勾选，1.1.0 补）：被打上标记的面板项在
+         收起态不显示；标记由脚本按存储的隐藏名单打在面板项外层。 */
+      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [data-sidebar-restore-hidden] {
+        display: none !important;
       }
     `;
 
-    /* ——— 自定义侧边栏背景色（1.1.0）———
+    /* ——— 自定义侧边栏颜色（1.1.0）———
        设置页里加一个「侧边栏设置」页签（官方 settings.section 槽位），
-       颜色存 localStorage；启用时给 html 写 --sidebar-restore-bg 变量并
-       打 data-sidebar-restore-bg 标记，样式表末尾两条规则据此换背景。
+       可分别设置背景色与文字/图标颜色。颜色存 localStorage；启用时
+       给 html 写对应变量并打标记，样式表末尾的规则据此换色。
        React 与槽位都是附加能力：取不到或注册失败，只丢这个页签，
        不影响轨道本体。 */
-    const BG_STORAGE_KEY = 'dsh-sidebar-restore:sidebar-bg';
-    const readSidebarBg = () => {
-      try { return window.localStorage.getItem(BG_STORAGE_KEY) || ''; } catch { return ''; }
+    /* 一项颜色设置的三件套：读存储、刷到 html、写存储并刷。 */
+    const createSidebarColor = (storageKey, cssVar, attr) => ({
+      read() {
+        try { return window.localStorage.getItem(storageKey) || ''; } catch { return ''; }
+      },
+      paint(value) {
+        const root = document.documentElement;
+        if (/^#[0-9a-f]{6}$/i.test(value || '')) {
+          root.style.setProperty(cssVar, value);
+          root.setAttribute(attr, '');
+        } else {
+          root.style.removeProperty(cssVar);
+          root.removeAttribute(attr);
+        }
+      },
+      set(value) {
+        try {
+          if (value) window.localStorage.setItem(storageKey, value);
+          else window.localStorage.removeItem(storageKey);
+        } catch { /* 本地存储不可用时，仅本次会话内生效 */ }
+        this.paint(value);
+      },
+    });
+    const bgColor = createSidebarColor('dsh-sidebar-restore:sidebar-bg', '--sidebar-restore-bg', 'data-sidebar-restore-bg');
+    const fgColor = createSidebarColor('dsh-sidebar-restore:sidebar-fg', '--sidebar-restore-fg', 'data-sidebar-restore-fg');
+    const readSidebarBg = bgColor.read;
+    const paintSidebarBg = bgColor.paint;
+    const readSidebarFg = fgColor.read;
+    const paintSidebarFg = fgColor.paint;
+
+    /* 简洁轨道开关：与颜色一样存 localStorage，启用时 html 打标记。 */
+    const MINIMAL_STORAGE_KEY = 'dsh-sidebar-restore:minimal-rail';
+    const readMinimalRail = () => {
+      try { return window.localStorage.getItem(MINIMAL_STORAGE_KEY) === '1'; } catch { return false; }
     };
-    const paintSidebarBg = (value) => {
-      const root = document.documentElement;
-      if (/^#[0-9a-f]{6}$/i.test(value || '')) {
-        root.style.setProperty('--sidebar-restore-bg', value);
-        root.setAttribute('data-sidebar-restore-bg', '');
-      } else {
-        root.style.removeProperty('--sidebar-restore-bg');
-        root.removeAttribute('data-sidebar-restore-bg');
+    const paintMinimalRail = (on) => {
+      document.documentElement.toggleAttribute('data-sidebar-restore-minimal', !!on);
+    };
+    const setMinimalRail = (on) => {
+      try {
+        if (on) window.localStorage.setItem(MINIMAL_STORAGE_KEY, '1');
+        else window.localStorage.removeItem(MINIMAL_STORAGE_KEY);
+      } catch { /* 本地存储不可用时，仅本次会话内生效 */ }
+      paintMinimalRail(on);
+    };
+
+    /* ——— 按面板单独隐藏（1.1.0 补）———
+       面板列表每一项的外层元素里都有一个行按钮，其 aria-label 就是
+       面板名（插件、自动化任务、更多，以及其他插件加的面板如插件
+       市场、上下文洞察），以它为键存隐藏名单——名单内容因此天然是
+       「当前用户实际装了哪些面板」。宿主重建侧栏后，由已有的
+       bodyObserver 回调重新打标记。 */
+    const HIDDEN_PANELS_KEY = 'dsh-sidebar-restore:hidden-panels';
+    const readHiddenPanels = () => {
+      try {
+        const raw = window.localStorage.getItem(HIDDEN_PANELS_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.filter(x => typeof x === 'string') : [];
+      } catch { return []; }
+    };
+    const panelKeyOf = (item) => {
+      const btn = item.querySelector('button');
+      const key = (btn?.getAttribute('aria-label') || item.textContent || '').trim().replace(/\s+/g, ' ');
+      return key || null;
+    };
+    const listSidebarPanels = () => {
+      const list = document.querySelector('[class*="_sidebarCol"] [class*="_panelList"]');
+      if (!list) return [];
+      const out = [];
+      for (const item of list.children) {
+        const key = panelKeyOf(item);
+        if (key && !out.some(p => p.key === key)) out.push({ key, el: item });
+      }
+      return out;
+    };
+    const applyHiddenPanels = () => {
+      const hidden = new Set(readHiddenPanels());
+      for (const { key, el } of listSidebarPanels()) {
+        if (hidden.has(key)) el.setAttribute('data-sidebar-restore-hidden', '');
+        else el.removeAttribute('data-sidebar-restore-hidden');
       }
     };
-    const setSidebarBg = (value) => {
-      try {
-        if (value) window.localStorage.setItem(BG_STORAGE_KEY, value);
-        else window.localStorage.removeItem(BG_STORAGE_KEY);
-      } catch { /* 本地存储不可用时，仅本次会话内生效 */ }
-      paintSidebarBg(value);
+    const setPanelHidden = (key, hide) => {
+      const arr = readHiddenPanels().filter(k => k !== key);
+      if (hide) arr.push(key);
+      try { window.localStorage.setItem(HIDDEN_PANELS_KEY, JSON.stringify(arr)); } catch { /* 忽略 */ }
+      applyHiddenPanels();
+      return arr;
     };
     const isZhLang = () => ((document.documentElement.lang || navigator.language || '').toLowerCase().startsWith('zh'));
 
@@ -683,57 +788,110 @@ window.__ModuleLoader__.load({
     try { ReactLib = typeof require === 'function' ? require('react') : null; } catch { ReactLib = null; }
 
     const BG_PRESETS = ['', '#f9fafb', '#ffffff', '#e8f0fe', '#fef3c7', '#1b1b1c', '#111827', '#1e3a8a', '#14532d', '#7f1d1d'];
+    const FG_PRESETS = ['', '#f9fafb', '#ffffff', '#d1d5db', '#9ca3af', '#374151', '#1b1b1c', '#000000', '#7dd3fc', '#fca5a5'];
 
     function SidebarSettingsSection() {
       const h = ReactLib.createElement;
       const zh = isZhLang();
-      const [custom, setCustom] = ReactLib.useState(() => readSidebarBg());
-      const [hex, setHex] = ReactLib.useState(() => readSidebarBg());
-      const choose = (value) => { setSidebarBg(value); setCustom(value); setHex(value); };
-      const commitHex = () => {
-        const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-        if (m) choose(`#${m[1].toLowerCase()}`);
-        else setHex(custom);
-      };
-      const swatch = (value) => h('button', {
-        key: value || 'theme',
-        type: 'button',
-        title: value || (zh ? '跟随主题' : 'Follow theme'),
-        onClick: () => choose(value),
-        style: {
-          width: 30, height: 30, borderRadius: 8, cursor: 'pointer', padding: 0,
-          border: custom === value ? '2px solid #4f7cff' : '1px solid rgba(140,140,140,.45)',
-          background: value || 'linear-gradient(135deg, rgba(0,0,0,0) 46%, rgba(150,150,150,.85) 46%, rgba(150,150,150,.85) 54%, rgba(0,0,0,0) 54%)',
-        },
-      });
+      const [bg, setBg] = ReactLib.useState(() => bgColor.read());
+      const [bgHex, setBgHex] = ReactLib.useState(() => bgColor.read());
+      const [fg, setFg] = ReactLib.useState(() => fgColor.read());
+      const [fgHex, setFgHex] = ReactLib.useState(() => fgColor.read());
+      const [minimal, setMinimal] = ReactLib.useState(() => readMinimalRail());
+      /* 打开页签这一刻，侧栏里实际存在的面板（动态读取） */
+      const [panels] = ReactLib.useState(() => listSidebarPanels().map(p => p.key));
+      const [hiddenPanels, setHiddenPanels] = ReactLib.useState(() => readHiddenPanels());
       const fieldStyle = { padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(140,140,140,.4)', background: 'transparent', color: 'inherit', fontSize: 13 };
-      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 520, padding: '4px 0' } },
+      /* 一组颜色设置：标题、色块、取色器与十六进制输入、恢复默认、状态行 */
+      const group = ({ title, presets, custom, hex, setHex, apply }) => {
+        const choose = (value) => apply(value);
+        const commitHex = () => {
+          const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+          if (m) choose(`#${m[1].toLowerCase()}`);
+          else setHex(custom);
+        };
+        return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+          h('div', { style: { fontSize: 13, fontWeight: 600 } }, title),
+          h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' } },
+            presets.map((value) => h('button', {
+              key: value || 'theme',
+              type: 'button',
+              title: value || (zh ? '跟随主题' : 'Follow theme'),
+              onClick: () => choose(value),
+              style: {
+                width: 30, height: 30, borderRadius: 8, cursor: 'pointer', padding: 0,
+                border: custom === value ? '2px solid #4f7cff' : '1px solid rgba(140,140,140,.45)',
+                background: value || 'linear-gradient(135deg, rgba(0,0,0,0) 46%, rgba(150,150,150,.85) 46%, rgba(150,150,150,.85) 54%, rgba(0,0,0,0) 54%)',
+              },
+            }))),
+          h('div', { style: { display: 'flex', gap: 10, alignItems: 'center' } },
+            h('input', {
+              type: 'color',
+              value: /^#[0-9a-f]{6}$/i.test(custom) ? custom : '#1b1b1c',
+              onChange: (e) => choose(e.target.value),
+              style: { width: 46, height: 34, padding: 0, border: 'none', background: 'none', cursor: 'pointer' },
+            }),
+            h('input', {
+              type: 'text', value: hex, placeholder: '#RRGGBB', spellCheck: false,
+              onChange: (e) => setHex(e.target.value),
+              onBlur: commitHex,
+              onKeyDown: (e) => { if (e.key === 'Enter') commitHex(); },
+              style: { ...fieldStyle, width: 112, fontFamily: 'ui-monospace, monospace' },
+            }),
+            h('button', { type: 'button', onClick: () => choose(''), style: { ...fieldStyle, cursor: 'pointer' } },
+              zh ? '恢复默认' : 'Reset')),
+          h('div', { style: { fontSize: 12, opacity: 0.65 } },
+            custom
+              ? (zh ? `当前自定义颜色：${custom}` : `Current custom color: ${custom}`)
+              : (zh ? '当前跟随主题（未自定义）' : 'Currently following the theme (no custom color)')));
+      };
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 520, padding: '4px 0' } },
         h('div', { style: { fontSize: 15, fontWeight: 600 } }, zh ? '侧边栏设置' : 'Sidebar settings'),
         h('div', { style: { fontSize: 12.5, opacity: 0.65, lineHeight: 1.6 } },
           zh
-            ? '自定义侧边栏的背景颜色，应用于停靠侧边栏、收起后的图标轨道和工作区悬浮卡片。选择第一个色块（跟随主题）即可恢复默认。'
-            : 'Customize the sidebar background color. It applies to the docked sidebar, the collapsed icon rail and the workspace flyout card. Pick the first swatch (Follow theme) to restore the default.'),
-        h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' } }, BG_PRESETS.map(swatch)),
-        h('div', { style: { display: 'flex', gap: 10, alignItems: 'center' } },
-          h('input', {
-            type: 'color',
-            value: /^#[0-9a-f]{6}$/i.test(custom) ? custom : '#1b1b1c',
-            onChange: (e) => choose(e.target.value),
-            style: { width: 46, height: 34, padding: 0, border: 'none', background: 'none', cursor: 'pointer' },
-          }),
-          h('input', {
-            type: 'text', value: hex, placeholder: '#RRGGBB', spellCheck: false,
-            onChange: (e) => setHex(e.target.value),
-            onBlur: commitHex,
-            onKeyDown: (e) => { if (e.key === 'Enter') commitHex(); },
-            style: { ...fieldStyle, width: 112, fontFamily: 'ui-monospace, monospace' },
-          }),
-          h('button', { type: 'button', onClick: () => choose(''), style: { ...fieldStyle, cursor: 'pointer' } },
-            zh ? '恢复默认' : 'Reset')),
-        h('div', { style: { fontSize: 12, opacity: 0.65 } },
-          custom
-            ? (zh ? `当前自定义颜色：${custom}` : `Current custom color: ${custom}`)
-            : (zh ? '当前跟随主题（未自定义）' : 'Currently following the theme (no custom color)')));
+            ? '自定义侧边栏的背景颜色与文字/图标颜色，应用于停靠侧边栏、收起后的图标轨道和工作区悬浮卡片。换深色背景时记得把文字/图标调成浅色，反之亦然；每组选第一个色块（跟随主题）即可恢复默认。'
+            : 'Customize the sidebar background and text/icon colors. They apply to the docked sidebar, the collapsed icon rail and the workspace flyout card. With a dark background, pick a light text color (and vice versa). The first swatch in each group (Follow theme) restores the default.'),
+        group({
+          title: zh ? '背景颜色' : 'Background color',
+          presets: BG_PRESETS,
+          custom: bg, hex: bgHex, setHex: setBgHex,
+          apply: (v) => { bgColor.set(v); setBg(v); setBgHex(v); },
+        }),
+        group({
+          title: zh ? '文字与图标颜色' : 'Text & icon color',
+          presets: FG_PRESETS,
+          custom: fg, hex: fgHex, setHex: setFgHex,
+          apply: (v) => { fgColor.set(v); setFg(v); setFgHex(v); },
+        }),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+          h('label', { style: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 } },
+            h('input', {
+              type: 'checkbox', checked: minimal,
+              onChange: (e) => { setMinimalRail(e.target.checked); setMinimal(e.target.checked); },
+              style: { width: 16, height: 16, cursor: 'pointer', margin: 0 },
+            }),
+            zh ? '简洁轨道：隐藏其他图标' : 'Minimal rail: hide other icons'),
+          h('div', { style: { fontSize: 12, opacity: 0.65, lineHeight: 1.6 } },
+            zh
+              ? '收起侧边栏时只保留鲸鱼标志、新建会话、工作区和个人头像，其余面板图标（插件、自动化任务、更多，以及其他插件加的面板）全部隐藏。停靠展开时不受影响。'
+              : 'When the sidebar is collapsed, keep only the whale logo, New session, Workspaces and your avatar. All other panel icons (Plugins, Automation tasks, More, and panels added by other plugins) are hidden. The docked sidebar is unaffected.')),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+          h('div', { style: { fontSize: 13, fontWeight: 600 } }, zh ? '单独隐藏图标（收起时）' : 'Hide individual icons (collapsed)'),
+          h('div', { style: { fontSize: 12, opacity: 0.65, lineHeight: 1.6 } },
+            zh
+              ? '以下是当前侧边栏里实际存在的面板（按你安装的插件动态读取）。勾选的面板在收起轨道时隐藏，停靠展开时仍显示；上方「简洁轨道」打开时整段隐藏，与此处无关。'
+              : 'These are the panels actually present in your sidebar right now, read live from the UI based on your installed plugins. Checked panels are hidden in the collapsed rail and still shown when docked. The minimal-rail switch above hides the whole list regardless.'),
+          panels.length === 0
+            ? h('div', { style: { fontSize: 12, opacity: 0.65 } }, zh ? '（未读取到面板列表）' : '(No panels found)')
+            : h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+                panels.map((key) => h('label', { key, style: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13 } },
+                  h('input', {
+                    type: 'checkbox',
+                    checked: hiddenPanels.includes(key),
+                    onChange: (e) => setHiddenPanels(setPanelHidden(key, e.target.checked)),
+                    style: { width: 15, height: 15, cursor: 'pointer', margin: 0 },
+                  }),
+                  key)))));
     }
 
     return {
@@ -751,8 +909,10 @@ window.__ModuleLoader__.load({
           style.textContent = CSS;
           document.head.append(style);
 
-          /* 自定义侧边栏背景色：把上次存下的颜色先刷上 */
+          /* 自定义侧边栏颜色：把上次存下的背景色与文字/图标色先刷上 */
           paintSidebarBg(readSidebarBg());
+          paintSidebarFg(readSidebarFg());
+          paintMinimalRail(readMinimalRail());
 
           /* 工作区入口按钮：先建好，挂载位置由 mountEntry 按侧栏根容器决定 */
           const entry = document.createElement('button');
@@ -1114,6 +1274,7 @@ window.__ModuleLoader__.load({
           if (initial !== null) bind(initial);
           rewrite();
           mountEntry();
+          applyHiddenPanels();
 
           /* 顶栏标记由桌面 preload 写入，可能晚于本插件挂载 */
           const rootObserver = new MutationObserver(scheduleRewrite);
@@ -1131,6 +1292,7 @@ window.__ModuleLoader__.load({
           const bodyObserver = new MutationObserver(() => {
             if (!entry.isConnected) mountEntry();
             if (frame === null || !frame.isConnected) scheduleRewrite();
+            applyHiddenPanels();
           });
           bodyObserver.observe(document.body, { childList: true, subtree: true });
 
@@ -1149,6 +1311,8 @@ window.__ModuleLoader__.load({
             instantFrame = 0;
             entry.remove();
             paintSidebarBg('');
+            paintSidebarFg('');
+            paintMinimalRail(false);
             document.documentElement.removeAttribute('data-rail-workspace');
             document.documentElement.style.removeProperty('--rail-flyout-top');
             document.documentElement.style.removeProperty('--rail-entry-top');

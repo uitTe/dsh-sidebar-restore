@@ -1,6 +1,6 @@
 # 侧边栏图标轨道
 
-Windows 桌面端收起侧边栏后，布局把首列轨道算成 `0px`，整列消失；本插件把这一列还原成 56px 图标竖条，让面板、新建会话、工作区入口与底部两行在收起态仍然可点。工作区入口用文件夹图标取代原来的搜索盒，指针悬停时在轨道右侧浮出一张工作区会话卡片。
+Windows 桌面端收起侧边栏后，布局把首列轨道算成 `0px`，整列消失；本插件把这一列还原成 56px 图标竖条，让面板、新建会话、工作区入口与底部两行在收起态仍然可点。工作区入口用文件夹图标取代原来的搜索盒，指针悬停时在轨道右侧浮出一张工作区会话卡片。1.1.0 起另在设置页注册「侧边栏设置」页签，可自定义侧边栏的背景色与文字/图标颜色，并可精简收起态轨道上显示的图标。
 
 ## 安装
 
@@ -13,6 +13,14 @@ dsh plugin --profile desktop add github:uitTe/dsh-sidebar-restore
 装好后重启桌面端，收起侧边栏即可看到轨道。宿主侧无行为，全部效果在浏览器端完成，不发网络请求。
 
 Install (Windows desktop client): enable the `dsh` command from the app's Application menu ("Manage dsh Command"), then run `dsh plugin --profile desktop add github:uitTe/dsh-sidebar-restore` and restart the app.
+
+## 侧边栏设置（1.1.0）
+
+插件经官方 `settings.section` 槽位在设置页左侧导航注册「侧边栏设置」页签（id `sidebar-restore`），与其它插件的自加页签同一机制，中英文随界面语言切换。页签内三组设置，全部存 `localStorage`、即时生效、刷新后保持：
+
+- **背景颜色**（键 `dsh-sidebar-restore:sidebar-bg`）：10 个预设色块（首个为跟随主题）、取色器、十六进制输入与恢复默认。同时作用于停靠侧边栏、收起轨道与工作区悬浮卡片三处。
+- **文字与图标颜色**（键 `dsh-sidebar-restore:sidebar-fg`）：与背景色独立的一组，整列文字与图标一起换色，次级文字自动压暗一档保留主次层次；新建会话按钮的填充改用自定义色的淡色调，避免深底浅字或白底白字看不清。
+- **精简轨道**：「简洁轨道」开关（键 `dsh-sidebar-restore:minimal-rail`）打开后，收起态只保留鲸鱼标志、新建会话、工作区入口与个人头像，中间整段面板隐藏；其下另有「单独隐藏图标」清单——动态读取当前侧栏实际装有的面板逐项列出复选框（键 `dsh-sidebar-restore:hidden-panels`），勾选的面板只在收起态隐藏，停靠态不受影响。
 
 ## 宿主的行为与本插件的位置
 
@@ -57,11 +65,11 @@ flowchart LR
 | `package.json` | 包名 `@uitte/dsh-sidebar-restore`，`dsh.bundle.patch` 指向 `cordis.patch.yml`，`dsh.client` 声明 `platform: "web"`、`immediately: true` |
 | `cordis.patch.yml` | 在 bundle 里插入一条 `id: sidebar-rail` 的条目 |
 | `index.js` | 宿主半，只有空的 `export function apply() {}` |
-| `client.js` | 全部行为：样式注入、列宽改写、滑动动画、入口按钮、悬浮卡片 |
+| `client.js` | 全部行为：样式注入、列宽改写、滑动动画、入口按钮、悬浮卡片、设置页签 |
 | `locale/zh.json`、`locale/en.json` | 插件在设置页的标题与描述 |
 | `icon.svg` | 48 × 48 的轨道示意图标 |
 
-`client.js` 以 `window.__ModuleLoader__.load({ id, factory() { ... } })` 注册，返回值声明 `inject: ['layout']`，`apply(ctx)` 里用 `ctx.effect(fn, 'sidebar-rail')` 包住全部副作用，返回的清理函数负责摘掉样式、按钮、观察器与写在 `html`、外框上的属性。
+`client.js` 以 `window.__ModuleLoader__.load({ id, factory() { ... } })` 注册，返回值声明 `inject: ['layout', 'slots']`（`slots` 为 1.1.0 注册设置页签所加），`apply(ctx)` 里用 `ctx.effect(fn, 'sidebar-rail')` 包住全部副作用，返回的清理函数负责摘掉样式、按钮、观察器与写在 `html`、外框上的属性。
 
 ## 常量
 
@@ -236,21 +244,17 @@ node tmp-verify/probe-entry.mjs http://127.0.0.1:4399/ 9413
 
 ## 现有问题
 
-### 工作区入口在真机上从未挂载
+### 工作区入口挂载 bug（1.0.0 存在，1.0.1 已修复）
 
-真机控制台报错：
+1.0.0 在真机上从未挂载成功，控制台报错：
 
 ```
 Uncaught NotFoundError: Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a child of this node.
-    at mountEntry (dsh-app://app/plugins/@@local/dsh-sidebar-rail/client.js:674:1)
-    at MutationObserver.<anonymous> (dsh-app://app/plugins/@@local/dsh-sidebar-rail/client.js:866:37)
 ```
 
-`mountEntry()` 里 `root.insertBefore(entry, region)` 的参照节点 `region` 来自 `root.querySelector('[class*="_regionArea"]')`，这是深度后代查询；而宿主侧栏根容器 `div._root` 的直属子节点顺序是 `_logoRow` → `_newSessionRow` → `_scrollRegion` → `_scrollArea` → `_panelList` → `_scrollFade` → `_footArea`，`_regionArea` 实际在 `_scrollRegion > _scrollArea` 内部。把深度后代交给 `insertBefore` 作参照节点，浏览器直接抛 `NotFoundError`，按钮从未进入侧栏，收起后自然看不到工作区图标。
+根源是层级错配：`mountEntry()` 里 `root.insertBefore(entry, region)` 的参照节点 `region` 来自 `root.querySelector('[class*="_regionArea"]')`，这是深度后代查询；`_regionArea` 实际在 `_scrollRegion > _scrollArea` 内部，不是根容器的直接子节点。同处错配还有卡片定位选择器 `… > [class*="_root"] > [class*="_regionArea"]`，同样匹配不到。
 
-同一处层级错配还有第二处：`client.js:435` 的卡片定位选择器写成 `… > [class*="_root"] > [class*="_regionArea"]`，要求 `_regionArea` 是根容器的直接子节点，同样匹配不到，卡片的位置规则也一并失效。
-
-修复方向：`mountEntry()` 改用 `region.parentElement.insertBefore(entry, region)`，插入后入口与 `_regionArea` 成为兄弟节点；卡片选择器去掉那一层 `>`，改成 `… > [class*="_root"] [class*="_regionArea"]`，并确认特异性仍高于上方轨道态的 100% 宽度规则。若要让入口排在 `_regionArea` 之前且仍处于根容器的直接子层级，需要把入口插到 `_scrollRegion` 之前，此时卡片定位基准也要跟着换。
+1.0.1 已修复（详见 FIX-NOTE.md）：`mountEntry()` 改用 `region.parentElement.insertBefore(entry, region)`，入口与 `_regionArea` 成为兄弟节点；卡片选择器去掉那一层 `>`，改成后代组合子；`syncFlyoutTop()` 的挂载判据由 `entry.parentElement !== root` 改为 `entry.isConnected`。其后历次真机验证（Windows 桌面端 1.0.6 起、1.0.9 从 GitHub 全新安装）均确认入口挂载、轨道与卡片正常。
 
 ### 验证台与真机结构不一致
 
