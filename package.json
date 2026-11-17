@@ -1,6 +1,6 @@
 {
   "name": "@uitte/dsh-sidebar-restore",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "private": true,
   "description": "Windows 桌面端：收起侧边栏后保留一条 56px 图标轨道，而不是整列隐藏",
   "repository": {

@@ -345,14 +345,15 @@ window.__ModuleLoader__.load({
       }
 
       /* 搜索盒子：轨道里由工作区入口顶替。它紧跟在入口按钮之后，位置已经由按钮接管，
-         所以整段收起不占位。
+         所以整段收起不占位。卡片展开时不适用（:not 排除）：卡片里要留着宿主原装的
+         工作区搜索，1.0.9 应 Su 要求恢复；按钮尺寸同理，卡片里保持宿主宽态的 28px。
          用「直接包含搜索按钮」定位这个盒子，避开同前缀的 searchButton / searchSlot / searchInput。
          data-rail-workspace 打在 html 自身，属性选择器直接写在 html 上。 */
-      html[data-windows-titlebar][data-rail-workspace] ${RAIL_STATE} > [class*="_sidebarCol"] div:has(> button[class*="_searchButton"]) {
+      html[data-windows-titlebar][data-rail-workspace] ${RAIL_STATE}:not([data-rail-flyout]) > [class*="_sidebarCol"] div:has(> button[class*="_searchButton"]) {
         display: none !important;
       }
 
-      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] button[class*="_searchButton"] {
+      html[data-windows-titlebar] ${RAIL_STATE}:not([data-rail-flyout]) > [class*="_sidebarCol"] button[class*="_searchButton"] {
         width: ${BUTTON}px !important;
         height: ${BUTTON}px !important;
         margin: 0 !important;
@@ -510,10 +511,8 @@ window.__ModuleLoader__.load({
         overscroll-behavior: contain !important;
       }
 
-      /* 卡片里也不需要搜索盒：工作区入口已经在轨道上，卡片只放会话列表 */
-      [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] div:has(> button[class*="_searchButton"]) {
-        display: none !important;
-      }
+      /* 卡片里的搜索盒不再隐藏（1.0.9）：1.0.0 时按「卡片只放会话列表」去掉，
+         Su 实际使用后要求把工作区原装搜索放回卡片，与停靠侧栏一致。 */
 
       /* 侧栏收起或卡片过渡时，标题栏菜单起点保持不变 */
       html[data-windows-titlebar]:has([data-sidebar-collapsed="true"]),
