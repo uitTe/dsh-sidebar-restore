@@ -29,7 +29,7 @@
  */
 window.__ModuleLoader__.load({
   id: '@uitte/dsh-sidebar-restore',
-  factory() {
+  factory(require) {
     /** 收起后的轨道宽度，与 Web 版 56px 轨道一致。 */
     const RAIL = 56;
     const RAIL_TRACK = `${RAIL}px`;
@@ -454,7 +454,9 @@ window.__ModuleLoader__.load({
         z-index: 80 !important;
         overflow: hidden !important;
         align-items: stretch !important;
-        background: var(--dsw-specific-sidebar-fill) !important;
+        /* 背景优先用「侧边栏设置」里的自定义色（--sidebar-restore-bg，
+           1.1.0），没设时回落宿主的侧栏填充色，行为与之前一致 */
+        background: var(--sidebar-restore-bg, var(--dsw-specific-sidebar-fill)) !important;
         border-radius: var(--dsw-radius-md) !important;
         box-shadow: 0 8px 32px #0000002e !important;
       }
@@ -636,11 +638,108 @@ window.__ModuleLoader__.load({
         margin: 0 !important;
         z-index: 70 !important;
       }
+
+      /* 自定义侧边栏背景色（设置页「侧边栏设置」页签，1.1.0）：颜色存
+         localStorage，启用时 html 上有 data-sidebar-restore-bg 属性、
+         --sidebar-restore-bg 变量。这里换侧栏根列的背景（停靠与轨道
+         共用）；悬浮卡片的背景由它自己的规则以
+         var(--sidebar-restore-bg, 宿主填充色) 优先取自定义色。
+         未设置时这条不生效，背景跟随主题。 */
+      html[data-sidebar-restore-bg] [class*="_sidebarCol"] {
+        background-color: var(--sidebar-restore-bg) !important;
+      }
     `;
 
+    /* ——— 自定义侧边栏背景色（1.1.0）———
+       设置页里加一个「侧边栏设置」页签（官方 settings.section 槽位），
+       颜色存 localStorage；启用时给 html 写 --sidebar-restore-bg 变量并
+       打 data-sidebar-restore-bg 标记，样式表末尾两条规则据此换背景。
+       React 与槽位都是附加能力：取不到或注册失败，只丢这个页签，
+       不影响轨道本体。 */
+    const BG_STORAGE_KEY = 'dsh-sidebar-restore:sidebar-bg';
+    const readSidebarBg = () => {
+      try { return window.localStorage.getItem(BG_STORAGE_KEY) || ''; } catch { return ''; }
+    };
+    const paintSidebarBg = (value) => {
+      const root = document.documentElement;
+      if (/^#[0-9a-f]{6}$/i.test(value || '')) {
+        root.style.setProperty('--sidebar-restore-bg', value);
+        root.setAttribute('data-sidebar-restore-bg', '');
+      } else {
+        root.style.removeProperty('--sidebar-restore-bg');
+        root.removeAttribute('data-sidebar-restore-bg');
+      }
+    };
+    const setSidebarBg = (value) => {
+      try {
+        if (value) window.localStorage.setItem(BG_STORAGE_KEY, value);
+        else window.localStorage.removeItem(BG_STORAGE_KEY);
+      } catch { /* 本地存储不可用时，仅本次会话内生效 */ }
+      paintSidebarBg(value);
+    };
+    const isZhLang = () => ((document.documentElement.lang || navigator.language || '').toLowerCase().startsWith('zh'));
+
+    let ReactLib = null;
+    try { ReactLib = typeof require === 'function' ? require('react') : null; } catch { ReactLib = null; }
+
+    const BG_PRESETS = ['', '#f9fafb', '#ffffff', '#e8f0fe', '#fef3c7', '#1b1b1c', '#111827', '#1e3a8a', '#14532d', '#7f1d1d'];
+
+    function SidebarSettingsSection() {
+      const h = ReactLib.createElement;
+      const zh = isZhLang();
+      const [custom, setCustom] = ReactLib.useState(() => readSidebarBg());
+      const [hex, setHex] = ReactLib.useState(() => readSidebarBg());
+      const choose = (value) => { setSidebarBg(value); setCustom(value); setHex(value); };
+      const commitHex = () => {
+        const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+        if (m) choose(`#${m[1].toLowerCase()}`);
+        else setHex(custom);
+      };
+      const swatch = (value) => h('button', {
+        key: value || 'theme',
+        type: 'button',
+        title: value || (zh ? '跟随主题' : 'Follow theme'),
+        onClick: () => choose(value),
+        style: {
+          width: 30, height: 30, borderRadius: 8, cursor: 'pointer', padding: 0,
+          border: custom === value ? '2px solid #4f7cff' : '1px solid rgba(140,140,140,.45)',
+          background: value || 'linear-gradient(135deg, rgba(0,0,0,0) 46%, rgba(150,150,150,.85) 46%, rgba(150,150,150,.85) 54%, rgba(0,0,0,0) 54%)',
+        },
+      });
+      const fieldStyle = { padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(140,140,140,.4)', background: 'transparent', color: 'inherit', fontSize: 13 };
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 520, padding: '4px 0' } },
+        h('div', { style: { fontSize: 15, fontWeight: 600 } }, zh ? '侧边栏设置' : 'Sidebar settings'),
+        h('div', { style: { fontSize: 12.5, opacity: 0.65, lineHeight: 1.6 } },
+          zh
+            ? '自定义侧边栏的背景颜色，应用于停靠侧边栏、收起后的图标轨道和工作区悬浮卡片。选择第一个色块（跟随主题）即可恢复默认。'
+            : 'Customize the sidebar background color. It applies to the docked sidebar, the collapsed icon rail and the workspace flyout card. Pick the first swatch (Follow theme) to restore the default.'),
+        h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' } }, BG_PRESETS.map(swatch)),
+        h('div', { style: { display: 'flex', gap: 10, alignItems: 'center' } },
+          h('input', {
+            type: 'color',
+            value: /^#[0-9a-f]{6}$/i.test(custom) ? custom : '#1b1b1c',
+            onChange: (e) => choose(e.target.value),
+            style: { width: 46, height: 34, padding: 0, border: 'none', background: 'none', cursor: 'pointer' },
+          }),
+          h('input', {
+            type: 'text', value: hex, placeholder: '#RRGGBB', spellCheck: false,
+            onChange: (e) => setHex(e.target.value),
+            onBlur: commitHex,
+            onKeyDown: (e) => { if (e.key === 'Enter') commitHex(); },
+            style: { ...fieldStyle, width: 112, fontFamily: 'ui-monospace, monospace' },
+          }),
+          h('button', { type: 'button', onClick: () => choose(''), style: { ...fieldStyle, cursor: 'pointer' } },
+            zh ? '恢复默认' : 'Reset')),
+        h('div', { style: { fontSize: 12, opacity: 0.65 } },
+          custom
+            ? (zh ? `当前自定义颜色：${custom}` : `Current custom color: ${custom}`)
+            : (zh ? '当前跟随主题（未自定义）' : 'Currently following the theme (no custom color)')));
+    }
+
     return {
-      /** 悬浮展开要用布局服务的开关动作，与宿主自己的切换按钮一致。 */
-      inject: ['layout'],
+      /** 悬浮展开要用布局服务的开关动作，与宿主自己的切换按钮一致；
+          slots 是设置页签注册要用的槽位服务。 */
+      inject: ['layout', 'slots'],
       apply(ctx) {
         ctx.effect(() => {
           /* 上一次加载留下的入口按钮与样式先清掉：热更新或重复挂载时不会叠加出两个 */
@@ -651,6 +750,9 @@ window.__ModuleLoader__.load({
           style.dataset.plugin = '@uitte/dsh-sidebar-restore';
           style.textContent = CSS;
           document.head.append(style);
+
+          /* 自定义侧边栏背景色：把上次存下的颜色先刷上 */
+          paintSidebarBg(readSidebarBg());
 
           /* 工作区入口按钮：先建好，挂载位置由 mountEntry 按侧栏根容器决定 */
           const entry = document.createElement('button');
@@ -1046,6 +1148,7 @@ window.__ModuleLoader__.load({
             if (instantFrame !== 0) cancelAnimationFrame(instantFrame);
             instantFrame = 0;
             entry.remove();
+            paintSidebarBg('');
             document.documentElement.removeAttribute('data-rail-workspace');
             document.documentElement.style.removeProperty('--rail-flyout-top');
             document.documentElement.style.removeProperty('--rail-entry-top');
@@ -1060,6 +1163,19 @@ window.__ModuleLoader__.load({
             style.remove();
           };
         }, 'sidebar-rail');
+
+        /* 设置页里加「侧边栏设置」页签：走官方 settings.section 槽位。
+           这是附加功能，React 或槽位不可用时静默放弃，不影响轨道本体。 */
+        if (ReactLib) {
+          try {
+            ctx.slots.inject('settings.section', () => ctx.slots.register({
+              name: 'settings.section',
+              id: 'sidebar-restore',
+              order: 20,
+              label: () => (isZhLang() ? '侧边栏设置' : 'Sidebar settings'),
+            }, SidebarSettingsSection));
+          } catch { /* 槽位注册失败时静默 */ }
+        }
       },
     };
   },
