@@ -28,7 +28,7 @@
  * 时长与阻尼曲线都作用在这条 transform 上，因此可以放心拉长到 460ms 并带轻微越冲。
  */
 window.__ModuleLoader__.load({
-  id: '@local/dsh-sidebar-rail',
+  id: '@uitte/dsh-sidebar-restore',
   factory() {
     /** 收起后的轨道宽度，与 Web 版 56px 轨道一致。 */
     const RAIL = 56;
@@ -491,6 +491,25 @@ window.__ModuleLoader__.load({
         padding-left: 0 !important;
       }
 
+      /* 列表过长时卡片内滚动（1.0.8）：工作区根容器在宿主宽态按
+         max-height: 100cqh 定高，上限是整列高度而不是卡片高度，于是它比
+         卡片还高出一截，列表的滚动行程按这个错误高度计算，滚到底仍有
+         最后几行被卡片下缘切掉、永远够不着。槽位容器是 display:contents，
+         根容器实际就是卡片（纵向 flex）的直接子项，改由 flex 撑满卡片
+         内容高度，列表高度随之正确，滚动行程完整。
+         列表本身再钉死为滚动容器：宿主有一条 @container scroll-state
+         规则会在「外层还能向下滚」时把列表的 overflow-y 关掉，那是停靠
+         布局的嵌套滚动编排，浮卡片里不适用；滚到尽头也不向外层链式滚动。 */
+      html[data-windows-titlebar] [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [data-slot] > [class*="_root"] {
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+      }
+
+      html[data-windows-titlebar] [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [class*="_listArea"] {
+        overflow-y: auto !important;
+        overscroll-behavior: contain !important;
+      }
+
       /* 卡片里也不需要搜索盒：工作区入口已经在轨道上，卡片只放会话列表 */
       [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] div:has(> button[class*="_searchButton"]) {
         display: none !important;
@@ -610,10 +629,10 @@ window.__ModuleLoader__.load({
         ctx.effect(() => {
           /* 上一次加载留下的入口按钮与样式先清掉：热更新或重复挂载时不会叠加出两个 */
           for (const stale of document.querySelectorAll('[data-rail-workspace-button]')) stale.remove();
-          for (const stale of document.querySelectorAll('style[data-plugin="@local/dsh-sidebar-rail"]')) stale.remove();
+          for (const stale of document.querySelectorAll('style[data-plugin="@uitte/dsh-sidebar-restore"]')) stale.remove();
 
           const style = document.createElement('style');
-          style.dataset.plugin = '@local/dsh-sidebar-rail';
+          style.dataset.plugin = '@uitte/dsh-sidebar-restore';
           style.textContent = CSS;
           document.head.append(style);
 

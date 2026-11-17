@@ -7,12 +7,12 @@ Windows 桌面端收起侧边栏后，布局把首列轨道算成 `0px`，整列
 在 DeepSeek Harness 中执行（`web` 换成你实际使用的 profile 名）：
 
 ```sh
-dsh plugin --profile web add github:uitTe/dsh-sidebar-rail
+dsh plugin --profile web add github:uitTe/dsh-sidebar-restore
 ```
 
 装好后重启 DSH，收起侧边栏即可看到轨道。本插件面向 Windows 桌面端（标题栏模式）；宿主侧无行为，全部效果在浏览器端完成，不发网络请求。
 
-Install: run `dsh plugin --profile web add github:uitTe/dsh-sidebar-rail` in DeepSeek Harness, then restart. Windows desktop (titlebar mode) only.
+Install: run `dsh plugin --profile web add github:uitTe/dsh-sidebar-restore` in DeepSeek Harness, then restart. Windows desktop (titlebar mode) only.
 
 ## 宿主的行为与本插件的位置
 
@@ -54,7 +54,7 @@ flowchart LR
 
 | 文件 | 作用 |
 | --- | --- |
-| `package.json` | 包名 `@local/dsh-sidebar-rail`，`dsh.bundle.patch` 指向 `cordis.patch.yml`，`dsh.client` 声明 `platform: "web"`、`immediately: true` |
+| `package.json` | 包名 `@uitte/dsh-sidebar-restore`，`dsh.bundle.patch` 指向 `cordis.patch.yml`，`dsh.client` 声明 `platform: "web"`、`immediately: true` |
 | `cordis.patch.yml` | 在 bundle 里插入一条 `id: sidebar-rail` 的条目 |
 | `index.js` | 宿主半，只有空的 `export function apply() {}` |
 | `client.js` | 全部行为：样式注入、列宽改写、滑动动画、入口按钮、悬浮卡片 |
@@ -89,7 +89,7 @@ flowchart LR
 
 ## 样式层
 
-样式集中在一段模板字符串里，注入为 `<style data-plugin="@local/dsh-sidebar-rail">`，挂载前先删掉同名的旧节点，重复加载不会叠出两份。
+样式集中在一段模板字符串里，注入为 `<style data-plugin="@uitte/dsh-sidebar-restore">`，挂载前先删掉同名的旧节点，重复加载不会叠出两份。
 
 轨道外观的所有规则都以 `html[data-windows-titlebar]` 加 `RAIL_STATE` 起头，并沿着 `> [class*="_sidebarCol"] > [data-slot="sidebar"] > [class*="_root"]` 的完整层级书写。层级必须写全：`_root` 这个后缀在同一条侧栏里被多个包复用，只写 `[class*="_root"]` 会连带命中面板列表里其它包的根节点。
 

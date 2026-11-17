@@ -1,15 +1,15 @@
 {
-  "name": "@local/dsh-sidebar-rail",
-  "version": "1.0.7",
+  "name": "@uitte/dsh-sidebar-restore",
+  "version": "1.0.8",
   "private": true,
   "description": "Windows 桌面端：收起侧边栏后保留一条 56px 图标轨道，而不是整列隐藏",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/uitTe/dsh-sidebar-rail.git"
+    "url": "git+https://github.com/uitTe/dsh-sidebar-restore.git"
   },
-  "homepage": "https://github.com/uitTe/dsh-sidebar-rail#readme",
+  "homepage": "https://github.com/uitTe/dsh-sidebar-restore#readme",
   "bugs": {
-    "url": "https://github.com/uitTe/dsh-sidebar-rail/issues"
+    "url": "https://github.com/uitTe/dsh-sidebar-restore/issues"
   },
   "keywords": [
     "dsh",
