@@ -4,15 +4,15 @@ Windows 桌面端收起侧边栏后，布局把首列轨道算成 `0px`，整列
 
 ## 安装
 
-在 DeepSeek Harness 中执行（`web` 换成你实际使用的 profile 名）：
+本插件面向 Windows 桌面端（标题栏模式），桌面端的 profile 名为 `desktop`。先在桌面端的「应用」菜单里点「Manage dsh Command / 管理 dsh 命令」启用 `dsh` 命令（`desktop` profile 由桌面端独占管理，只有这样装出来的 `dsh` 才能操作它），然后执行：
 
 ```sh
-dsh plugin --profile web add github:uitTe/dsh-sidebar-restore
+dsh plugin --profile desktop add github:uitTe/dsh-sidebar-restore
 ```
 
-装好后重启 DSH，收起侧边栏即可看到轨道。本插件面向 Windows 桌面端（标题栏模式）；宿主侧无行为，全部效果在浏览器端完成，不发网络请求。
+装好后重启桌面端，收起侧边栏即可看到轨道。宿主侧无行为，全部效果在浏览器端完成，不发网络请求。
 
-Install: run `dsh plugin --profile web add github:uitTe/dsh-sidebar-restore` in DeepSeek Harness, then restart. Windows desktop (titlebar mode) only.
+Install (Windows desktop client): enable the `dsh` command from the app's Application menu ("Manage dsh Command"), then run `dsh plugin --profile desktop add github:uitTe/dsh-sidebar-restore` and restart the app.
 
 ## 宿主的行为与本插件的位置
 

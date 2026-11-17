@@ -481,6 +481,23 @@ window.__ModuleLoader__.load({
         margin: 0 0 8px !important;
         padding: 0 4px !important;
         justify-content: flex-start !important;
+        /* 轨道规则把标题行 gap 归零过，卡片里恢复宿主的 4px，
+           否则搜索与操作组会贴在一起（1.0.10 补） */
+        gap: 4px !important;
+      }
+
+      /* 标题行里的操作按钮组同理（1.0.10）：轨道居中规则的选择器列表里也
+         带着 _headerActions，1.0.7 只恢复了标题行本身，漏了它——它在卡片里
+         仍带着 margin-left/right: auto，与搜索槽自带的 margin-left: auto
+         瓜分标题行的剩余空间，搜索按钮与操作组之间被撑出约 30px 的空档
+         （停靠态两者只隔 4px），操作组右缘也离卡片右缘差了同样一段。
+         在卡片里把它的边距归零、内容靠左，三个图标恢复均匀相接。 */
+      html[data-windows-titlebar] [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [class*="_headerActions"] {
+        justify-content: flex-start !important;
+        align-items: center !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
       }
 
       html[data-windows-titlebar] [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [class*="_listArea"],
