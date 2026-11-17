@@ -243,36 +243,3 @@ node tmp-verify/probe-entry.mjs http://127.0.0.1:4399/ 9413
 
 Latest bench readings: the three-state rail signature has `deviationCount` `0`; the flyout card reads `cardLeft: 56`, `cardWidth: 280`, and `cardTop` equal to the entry's top edge at `188`; after collapsing, `columns: "56px minmax(400px, 1fr) minmax(0px, 0px)"`; across twenty-plus frames of hover-open and leave-close column sequences, every value is `56` and `0px` never appears.
 
-## Known issues
-
-### Workspace entry mount bug (present in 1.0.0, fixed in 1.0.1)
-
-1.0.0 never mounted successfully on a real machine; the console showed:
-
-```
-Uncaught NotFoundError: Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a child of this node.
-```
-
-The root cause was a hierarchy mismatch: in `mountEntry()`, the reference node `region` for `root.insertBefore(entry, region)` came from `root.querySelector('[class*="_regionArea"]')`, a deep descendant query, while `_regionArea` actually lives inside `_scrollRegion > _scrollArea` and is not a direct child of the root. The same mismatch existed in the card positioning selector `… > [class*="_root"] > [class*="_regionArea"]`, which likewise never matched.
-
-Fixed in 1.0.1 (see FIX-NOTE.md): `mountEntry()` now uses `region.parentElement.insertBefore(entry, region)`, making the entry a sibling of `_regionArea`; the card selector drops that one `>` and uses a descendant combinator; and `syncFlyoutTop()`'s mount test changed from `entry.parentElement !== root` to `entry.isConnected`. Every real-machine check since (Windows desktop from 1.0.6 on, and a fresh GitHub install of 1.0.9) confirms the entry mounts and the rail and card behave.
-
-### Test bench structure differs from the real host
-
-`tmp-verify/fixture.html` builds `_regionArea` as a direct child of the root, one level shallower than the real host. That is why `probe.mjs` and `probe-entry.mjs` passed completely (`entryCount: 1`, `entryDisplay: "flex"`, `cardLeft: 56`, `cardWidth: 280`) while the real machine threw. To guard against this class of bug, the bench must use the real hierarchy: rebuild the `_scrollRegion > _scrollArea` nesting following `src_client_SidebarRoot.tsx` when changing it.
-
-### No evidence channel on the real machine
-
-The desktop renderer runs on the custom `dsh-app://app/` protocol with no debug port open (`/json/version` on `9222` and `19230` both return 404). The Web GUI port returns 401 for `/`; the startup cookie is fetched by the main process after `host.start()` via `authenticateWebHost(url)` and kept and forwarded internally, so it cannot be reconstructed from outside. The `dsh` CLI is not on `PATH` either. Evidence currently comes from console errors plus screenshots; per-frame data can only come from the bench.
-
-### The flyout card depends on the host's expanded state
-
-Card content only renders while the host's `wide` is true, so hovering must really call `ctx.layout.toggleSidebar()`. Host state genuinely switches, and anything keyed on `wide` that the plugin's overrides don't cover shows through during the hover. Already covered: panel titles, the New Session label and shortcut, the brand name, footer text and status indicators, icon sizes, and the sidebar root width. This dependency remains the most fragile part of the design — anything new the host renders by `wide` needs a new rule in the plugin's rail state.
-
-### Coupling to hashed class names
-
-All selectors depend on `[class*="_xxx"]` substrings; if the host changes its class-name generation, selectors silently stop matching — rules simply stop applying, with no error. Prefix containment has bitten three times (`_newSessionLabel` / `_newSessionLabelMask`, `_panelTitle` / `_panelTitleBlock`, `_badge` / `_badgeLabel`). Before adding a selector, check for longer class names sharing the same prefix.
-
-### Icon sizes are decided by host props
-
-The host passes 16 or 18 depending on `wide`; while the card is open the host is in the wide state and every icon shrinks one step. The plugin can only write the rail sizes back with CSS afterwards — one rule in each of four places (panels, New Session, avatar, plugin badge). If the host changes those passed values, constants such as `ICON` and `ICON - 2` have to follow.

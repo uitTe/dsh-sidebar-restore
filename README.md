@@ -245,36 +245,3 @@ node tmp-verify/probe-entry.mjs http://127.0.0.1:4399/ 9413
 
 最近一轮验证台读数：轨道三态签名 `deviationCount` 为 `0`；悬浮卡片 `cardLeft: 56`、`cardWidth: 280`、`cardTop` 与入口上缘同为 `188`；收起后 `columns: "56px minmax(400px, 1fr) minmax(0px, 0px)"`；悬停展开与离开收起两段各二十余帧的列宽序列里全都是 `56`，没有出现过 `0px`。
 
-## 现有问题
-
-### 工作区入口挂载 bug（1.0.0 存在，1.0.1 已修复）
-
-1.0.0 在真机上从未挂载成功，控制台报错：
-
-```
-Uncaught NotFoundError: Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a child of this node.
-```
-
-根源是层级错配：`mountEntry()` 里 `root.insertBefore(entry, region)` 的参照节点 `region` 来自 `root.querySelector('[class*="_regionArea"]')`，这是深度后代查询；`_regionArea` 实际在 `_scrollRegion > _scrollArea` 内部，不是根容器的直接子节点。同处错配还有卡片定位选择器 `… > [class*="_root"] > [class*="_regionArea"]`，同样匹配不到。
-
-1.0.1 已修复（详见 FIX-NOTE.md）：`mountEntry()` 改用 `region.parentElement.insertBefore(entry, region)`，入口与 `_regionArea` 成为兄弟节点；卡片选择器去掉那一层 `>`，改成后代组合子；`syncFlyoutTop()` 的挂载判据由 `entry.parentElement !== root` 改为 `entry.isConnected`。其后历次真机验证（Windows 桌面端 1.0.6 起、1.0.9 从 GitHub 全新安装）均确认入口挂载、轨道与卡片正常。
-
-### 验证台与真机结构不一致
-
-`tmp-verify/fixture.html` 把 `_regionArea` 建成根容器的直接子节点，与宿主真实层级差一层。因此 `probe.mjs`、`probe-entry.mjs` 全部通过（`entryCount: 1`、`entryDisplay: "flex"`、`cardLeft: 56`、`cardWidth: 280`），真机却抛错。复现台需要通过真实层级才能守住这类问题，改动时应先按 `src_client_SidebarRoot.tsx` 的嵌套重建 `_scrollRegion > _scrollArea` 这一层。
-
-### 真机取证通道缺失
-
-桌面渲染进程走 `dsh-app://app/` 自定义协议，没有开放调试端口（`9222`、`19230` 的 `/json/version` 都返回 404）。Web GUI 端口对 `/` 返回 401，启动 Cookie 由主进程在 `host.start()` 之后用 `authenticateWebHost(url)` 取走并自行保管转发，外部构造不出来。`dsh` CLI 也不在 `PATH` 里。当前的取值方式是控制台报错加截图，逐帧数据只能靠复现台。
-
-### 悬浮卡片依赖宿主展开态
-
-卡片内容只在宿主 `wide` 为真时渲染，所以悬浮要真的调 `ctx.layout.toggleSidebar()`。宿主状态确实切过去了，凡是跟着 `wide` 走的量与插件覆盖没写到的地方都会在悬浮期间露出来。已经补上的有：面板标题、新建会话标签与快捷键、品牌名、底部两行文字与状态指示、图标尺寸、侧栏根容器宽度。这条依赖仍是这一块最脆的地方——宿主新增任何按 `wide` 渲染的东西，都要在插件的轨道态规则里补一条。
-
-### 类名哈希耦合
-
-选择器全部依赖 `[class*="_xxx"]` 子串，宿主升级后类名生成规则一变就会静默失配，表现为某些规则整体不生效，且没有报错。已经被前缀包含关系绊过三次（`_newSessionLabel` / `_newSessionLabelMask`、`_panelTitle` / `_panelTitleBlock`、`_badge` / `_badgeLabel`）。新增选择器时要先核对同前缀的更长类名。
-
-### 图标尺寸由宿主属性决定
-
-宿主按 `wide` 传 16 与 18，卡片展开期间处于宽态，图标会整体缩小一圈。插件只能事后用 CSS 写回轨道态尺寸，四处（面板、新建会话、头像、插件徽标）各有一条规则。宿主若改动这几处传值，`ICON`、`ICON - 2` 这些常量要跟着改。
