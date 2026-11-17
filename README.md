@@ -1,5 +1,7 @@
 # 侧边栏图标轨道
 
+中文 | [English](README.en.md)
+
 Windows 桌面端收起侧边栏后，布局把首列轨道算成 `0px`，整列消失；本插件把这一列还原成 56px 图标竖条，让面板、新建会话、工作区入口与底部两行在收起态仍然可点。工作区入口用文件夹图标取代原来的搜索盒，指针悬停时在轨道右侧浮出一张工作区会话卡片。1.1.0 起另在设置页注册「侧边栏设置」页签，可自定义侧边栏的背景色与文字/图标颜色，并可精简收起态轨道上显示的图标。
 
 ## 安装
@@ -16,9 +18,10 @@ Install (Windows desktop client): enable the `dsh` command from the app's Applic
 
 ## 侧边栏设置（1.1.0）
 
-插件经官方 `settings.section` 槽位在设置页左侧导航注册「侧边栏设置」页签（id `sidebar-restore`），与其它插件的自加页签同一机制，中英文随界面语言切换。页签内三组设置，全部存 `localStorage`、即时生效、刷新后保持：
+插件经官方 `settings.section` 槽位在设置页左侧导航注册「侧边栏设置」页签（id `sidebar-restore`），与其它插件的自加页签同一机制，中英文随界面语言切换。页签内各组设置全部存 `localStorage`、即时生效、刷新后保持，页签底部有「全部恢复默认」一次清掉所有设置：
 
-- **背景颜色**（键 `dsh-sidebar-restore:sidebar-bg`）：10 个预设色块（首个为跟随主题）、取色器、十六进制输入与恢复默认。同时作用于停靠侧边栏、收起轨道与工作区悬浮卡片三处。
+- **配色组合**：页签顶部四套预设，一键同时套用背景色、文字/图标色与透明度——朋克霓虹（深紫 `#160a2e` / 青 `#00e5ff` / 85%）、霓虹粉蓝（朋克蓝 `#0a1638` / 粉 `#ff2ea6` / 88%）、午夜蓝（`#111827` / `#e5e7eb` / 94%）、暖纸（`#fdf6e3` / `#3f3f46` / 100%）。套用后仍可再单独微调每一项。
+- **背景颜色**（键 `dsh-sidebar-restore:sidebar-bg`）：10 个预设色块（首个为跟随主题）、取色器、十六进制输入与恢复默认。同时作用于停靠侧边栏、收起轨道与工作区悬浮卡片三处。其下另有**背景透明度**滑杆（键 `dsh-sidebar-restore:sidebar-bg-alpha`，0–100%），侧栏与卡片一起透，配自定义壁纸时可把壁纸透出来；背景组恢复默认时透明度一并归 100%。
 - **文字与图标颜色**（键 `dsh-sidebar-restore:sidebar-fg`）：与背景色独立的一组，整列文字与图标一起换色，次级文字自动压暗一档保留主次层次；新建会话按钮的填充改用自定义色的淡色调，避免深底浅字或白底白字看不清。
 - **精简轨道**：「简洁轨道」开关（键 `dsh-sidebar-restore:minimal-rail`）打开后，收起态只保留鲸鱼标志、新建会话、工作区入口与个人头像，中间整段面板隐藏；其下另有「单独隐藏图标」清单——动态读取当前侧栏实际装有的面板逐项列出复选框（键 `dsh-sidebar-restore:hidden-panels`），勾选的面板只在收起态隐藏，停靠态不受影响。
 
@@ -113,7 +116,7 @@ flowchart LR
 - **图标尺寸**：宿主按宽态、轨道态分别传 16 与 18，卡片展开期间宿主处于宽态会把图标整体缩小一圈，这里按 `_panelGlyph svg`、`button[class*="_newSession"] [class*="_newSessionContent"] svg`、`_trigger svg`、`_badge svg` 逐处写回轨道态尺寸。
 - **文字隐藏**：`_panelTitle`、`_newSessionLabel`、`_newSessionShortcut`、`_brandName` 在 56px 竖条里放不下，收起。
 - **轨道里隐藏工作区区域**：`:not([data-rail-flyout])` 下整段 `display: none`。宿主给这一段设了 `flex: 1`，留着会在卡片浮起时把底部两行顶上去。
-- **卡片**：悬浮态下 `_sidebarCol` 与根容器都放开溢出，根容器保持 56px 宽并加 `position: relative`；`_regionArea` 改成绝对定位，`left: 56px`、`top: var(--rail-flyout-top, 8px)`、宽 280px、圆角、阴影、`z-index: 80`，内部恢复展开排布并隐藏卡片里的搜索盒。
+- **卡片**：悬浮态下 `_sidebarCol` 与根容器都放开溢出，根容器保持 56px 宽并加 `position: relative`；`_regionArea` 改成绝对定位，`left: 56px`、`top: var(--rail-flyout-top, 8px)`、宽 280px、圆角、阴影、`z-index: 80`，内部恢复展开排布（工作区标题行与原装搜索自 1.0.9 起在卡片里完整恢复）。
 - **细节**：菜单起点在收起态与悬浮期固定 `--dsh-windows-menu-start: 48px`；轨道与中栏之间补回 0.5px 分隔线，宿主在标题栏分支去掉了这条边框。
 
 类名带构建哈希，只能按 `[class*="_xxx"]` 子串定位。同前缀的类名要显式排除，已经踩过两次：`_newSessionLabel` 会连带命中 `_newSessionLabelMask`（图标与标签都包在那层里，隐藏它会把图标一起吃掉），`_panelTitle` 会连带命中 `_panelTitleBlock`，`_badge` 会连带命中 `_badgeLabel` 与 `_badgeCount`。

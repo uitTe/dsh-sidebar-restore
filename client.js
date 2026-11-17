@@ -708,18 +708,47 @@ window.__ModuleLoader__.load({
           root.removeAttribute(attr);
         }
       },
-      set(value) {
+      store(value) {
         try {
           if (value) window.localStorage.setItem(storageKey, value);
           else window.localStorage.removeItem(storageKey);
         } catch { /* 本地存储不可用时，仅本次会话内生效 */ }
+      },
+      set(value) {
+        this.store(value);
         this.paint(value);
       },
     });
     const bgColor = createSidebarColor('dsh-sidebar-restore:sidebar-bg', '--sidebar-restore-bg', 'data-sidebar-restore-bg');
     const fgColor = createSidebarColor('dsh-sidebar-restore:sidebar-fg', '--sidebar-restore-fg', 'data-sidebar-restore-fg');
     const readSidebarBg = bgColor.read;
-    const paintSidebarBg = bgColor.paint;
+    /* 背景透明度（1.1.0 补）：与背景色分开存，刷背景时合成 rgba；
+       背景色的 paint 因此不用通用版，要把透明度算进去。 */
+    const BG_ALPHA_KEY = 'dsh-sidebar-restore:sidebar-bg-alpha';
+    const readBgAlpha = () => {
+      try {
+        const n = Number.parseInt(window.localStorage.getItem(BG_ALPHA_KEY) || '100', 10);
+        return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 100;
+      } catch { return 100; }
+    };
+    const storeBgAlpha = (pct) => {
+      try { window.localStorage.setItem(BG_ALPHA_KEY, String(pct)); } catch { /* 忽略 */ }
+    };
+    const paintSidebarBg = (value) => {
+      const root = document.documentElement;
+      const hex = value === undefined ? bgColor.read() : value;
+      if (/^#[0-9a-f]{6}$/i.test(hex || '')) {
+        const r = Number.parseInt(hex.slice(1, 3), 16);
+        const g = Number.parseInt(hex.slice(3, 5), 16);
+        const b = Number.parseInt(hex.slice(5, 7), 16);
+        const a = Math.round(readBgAlpha()) / 100;
+        root.style.setProperty('--sidebar-restore-bg', `rgba(${r}, ${g}, ${b}, ${a})`);
+        root.setAttribute('data-sidebar-restore-bg', '');
+      } else {
+        root.style.removeProperty('--sidebar-restore-bg');
+        root.removeAttribute('data-sidebar-restore-bg');
+      }
+    };
     const readSidebarFg = fgColor.read;
     const paintSidebarFg = fgColor.paint;
 
@@ -789,6 +818,13 @@ window.__ModuleLoader__.load({
 
     const BG_PRESETS = ['', '#f9fafb', '#ffffff', '#e8f0fe', '#fef3c7', '#1b1b1c', '#111827', '#1e3a8a', '#14532d', '#7f1d1d'];
     const FG_PRESETS = ['', '#f9fafb', '#ffffff', '#d1d5db', '#9ca3af', '#374151', '#1b1b1c', '#000000', '#7dd3fc', '#fca5a5'];
+    /* 配色组合：背景与文字/图标成对套用，一键换整套。 */
+    const COLOR_COMBOS = [
+      { id: 'punk', bg: '#160a2e', fg: '#00e5ff', alpha: 85, zh: '朋克霓虹', en: 'Punk neon' },
+      { id: 'punk-pink', bg: '#0a1638', fg: '#ff2ea6', alpha: 88, zh: '霓虹粉蓝', en: 'Neon pink & blue' },
+      { id: 'midnight', bg: '#111827', fg: '#e5e7eb', alpha: 94, zh: '午夜蓝', en: 'Midnight' },
+      { id: 'paper', bg: '#fdf6e3', fg: '#3f3f46', alpha: 100, zh: '暖纸', en: 'Warm paper' },
+    ];
 
     function SidebarSettingsSection() {
       const h = ReactLib.createElement;
@@ -801,7 +837,30 @@ window.__ModuleLoader__.load({
       /* 打开页签这一刻，侧栏里实际存在的面板（动态读取） */
       const [panels] = ReactLib.useState(() => listSidebarPanels().map(p => p.key));
       const [hiddenPanels, setHiddenPanels] = ReactLib.useState(() => readHiddenPanels());
+      const [bgAlpha, setBgAlpha] = ReactLib.useState(() => readBgAlpha());
       const fieldStyle = { padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(140,140,140,.4)', background: 'transparent', color: 'inherit', fontSize: 13 };
+      /* 背景色要连透明度一起刷，不走通用 set */
+      const applyBg = (v) => {
+        bgColor.store(v);
+        if (!v) { storeBgAlpha(100); setBgAlpha(100); }
+        paintSidebarBg(v);
+        setBg(v); setBgHex(v);
+      };
+      const applyFg = (v) => { fgColor.set(v); setFg(v); setFgHex(v); };
+      const applyCombo = (c) => {
+        storeBgAlpha(c.alpha); setBgAlpha(c.alpha);
+        applyBg(c.bg);
+        applyFg(c.fg);
+      };
+      /* 整页恢复默认：颜色、透明度、简洁轨道、单独隐藏全清 */
+      const resetAll = () => {
+        applyBg('');
+        applyFg('');
+        setMinimalRail(false); setMinimal(false);
+        try { window.localStorage.removeItem(HIDDEN_PANELS_KEY); } catch { /* 忽略 */ }
+        applyHiddenPanels();
+        setHiddenPanels([]);
+      };
       /* 一组颜色设置：标题、色块、取色器与十六进制输入、恢复默认、状态行 */
       const group = ({ title, presets, custom, hex, setHex, apply }) => {
         const choose = (value) => apply(value);
@@ -849,19 +908,49 @@ window.__ModuleLoader__.load({
         h('div', { style: { fontSize: 15, fontWeight: 600 } }, zh ? '侧边栏设置' : 'Sidebar settings'),
         h('div', { style: { fontSize: 12.5, opacity: 0.65, lineHeight: 1.6 } },
           zh
-            ? '自定义侧边栏的背景颜色与文字/图标颜色，应用于停靠侧边栏、收起后的图标轨道和工作区悬浮卡片。换深色背景时记得把文字/图标调成浅色，反之亦然；每组选第一个色块（跟随主题）即可恢复默认。'
-            : 'Customize the sidebar background and text/icon colors. They apply to the docked sidebar, the collapsed icon rail and the workspace flyout card. With a dark background, pick a light text color (and vice versa). The first swatch in each group (Follow theme) restores the default.'),
+            ? '自定义侧边栏的背景颜色与文字/图标颜色，应用于停靠侧边栏、收起后的图标轨道和工作区悬浮卡片。换深色背景时记得把文字/图标调成浅色，反之亦然；也可以直接套用配色组合一键换整套。每组选第一个色块（跟随主题）即可恢复默认。'
+            : 'Customize the sidebar background and text/icon colors. They apply to the docked sidebar, the collapsed icon rail and the workspace flyout card. With a dark background, pick a light text color (and vice versa), or apply a color combo to switch both at once. The first swatch in each group (Follow theme) restores the default.'),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+          h('div', { style: { fontSize: 13, fontWeight: 600 } }, zh ? '配色组合' : 'Color combos'),
+          h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
+            COLOR_COMBOS.map((c) => h('button', {
+              key: c.id,
+              type: 'button',
+              title: `${c.bg} / ${c.fg} / ${c.alpha}%`,
+              onClick: () => applyCombo(c),
+              style: {
+                display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px 6px 8px',
+                borderRadius: 999, cursor: 'pointer', fontSize: 12.5, color: 'inherit',
+                background: 'transparent',
+                border: bg === c.bg && fg === c.fg && bgAlpha === c.alpha ? '2px solid #4f7cff' : '1px solid rgba(140,140,140,.45)',
+              },
+            },
+              h('span', { style: { width: 20, height: 20, borderRadius: '50%', flex: 'none', border: '1px solid rgba(140,140,140,.45)', background: `linear-gradient(90deg, ${c.bg} 50%, ${c.fg} 50%)` } }),
+              zh ? c.zh : c.en)))),
         group({
           title: zh ? '背景颜色' : 'Background color',
           presets: BG_PRESETS,
           custom: bg, hex: bgHex, setHex: setBgHex,
-          apply: (v) => { bgColor.set(v); setBg(v); setBgHex(v); },
+          apply: applyBg,
         }),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+          h('div', { style: { fontSize: 13, fontWeight: 600 } }, zh ? '背景透明度' : 'Background opacity'),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+            h('input', {
+              type: 'range', min: 0, max: 100, step: 1, value: bgAlpha,
+              onChange: (e) => { const v = Number(e.target.value); setBgAlpha(v); storeBgAlpha(v); paintSidebarBg(); },
+              style: { flex: '0 0 220px', cursor: 'pointer', margin: 0 },
+            }),
+            h('span', { style: { fontSize: 12.5, fontFamily: 'ui-monospace, monospace' } }, `${bgAlpha}%`)),
+          h('div', { style: { fontSize: 12, opacity: 0.65, lineHeight: 1.6 } },
+            zh
+              ? '100% 为完全不透明；调低后侧边栏与悬浮卡片会透出后面的壁纸。已设置背景颜色时生效。'
+              : '100% is fully opaque. Lower it to let the wallpaper show through the sidebar and the flyout card. Applies once a background color is set.')),
         group({
           title: zh ? '文字与图标颜色' : 'Text & icon color',
           presets: FG_PRESETS,
           custom: fg, hex: fgHex, setHex: setFgHex,
-          apply: (v) => { fgColor.set(v); setFg(v); setFgHex(v); },
+          apply: applyFg,
         }),
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
           h('label', { style: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 } },
@@ -891,7 +980,14 @@ window.__ModuleLoader__.load({
                     onChange: (e) => setHiddenPanels(setPanelHidden(key, e.target.checked)),
                     style: { width: 15, height: 15, cursor: 'pointer', margin: 0 },
                   }),
-                  key)))));
+                  key)))),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+          h('button', { type: 'button', onClick: resetAll, style: { ...fieldStyle, cursor: 'pointer' } },
+            zh ? '全部恢复默认' : 'Reset all to defaults'),
+          h('span', { style: { fontSize: 12, opacity: 0.65 } },
+            zh
+              ? '背景颜色、文字/图标颜色、透明度、简洁轨道与单独隐藏全部清空。'
+              : 'Clears the background color, text/icon color, opacity, minimal rail and per-panel hiding.')));
     }
 
     return {
