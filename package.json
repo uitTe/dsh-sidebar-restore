@@ -1,8 +1,26 @@
 {
   "name": "@local/dsh-sidebar-rail",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "description": "Windows 桌面端：收起侧边栏后保留一条 56px 图标轨道，而不是整列隐藏",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uitTe/dsh-sidebar-rail.git"
+  },
+  "homepage": "https://github.com/uitTe/dsh-sidebar-rail#readme",
+  "bugs": {
+    "url": "https://github.com/uitTe/dsh-sidebar-rail/issues"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "cordis",
+    "sidebar",
+    "rail",
+    "windows",
+    "plugin"
+  ],
   "type": "module",
   "exports": {
     ".": "./index.js",

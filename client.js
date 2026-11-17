@@ -468,8 +468,13 @@ window.__ModuleLoader__.load({
         margin-top: auto !important;
       }
 
-      /* 卡片里的内容恢复展开态排布：不再套用轨道内的居中与零间距 */
-      [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [class*="_sectionHeader"] {
+      /* 卡片里的内容恢复展开态排布：不再套用轨道内的居中与零间距。
+         这两条必须带 html[data-windows-titlebar] 前缀：轨道居中规则写的是
+         html 前缀 + RAIL_STATE（RAIL_STATE 含 data-rail-flyout），特异性 (0,4,1)，
+         不带前缀的展开规则只有 (0,4,0)，同为 !important 时反被轨道规则压住——
+         列表在卡片里仍按内容收缩居中，会话行按最大内容宽度排布，
+         行尾时间被挤出卡片右缘、按字形一半硬切（1.0.7 修复）。 */
+      html[data-windows-titlebar] [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [class*="_sectionHeader"] {
         height: auto !important;
         min-height: 36px !important;
         margin: 0 0 8px !important;
@@ -477,8 +482,8 @@ window.__ModuleLoader__.load({
         justify-content: flex-start !important;
       }
 
-      [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [class*="_listArea"],
-      [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [class*="_treeBody"] {
+      html[data-windows-titlebar] [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [class*="_listArea"],
+      html[data-windows-titlebar] [data-rail-flyout] > [class*="_sidebarCol"] [class*="_regionArea"] [class*="_treeBody"] {
         justify-content: flex-start !important;
         align-items: stretch !important;
         margin-left: 0 !important;

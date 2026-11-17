@@ -2,6 +2,18 @@
 
 Windows 桌面端收起侧边栏后，布局把首列轨道算成 `0px`，整列消失；本插件把这一列还原成 56px 图标竖条，让面板、新建会话、工作区入口与底部两行在收起态仍然可点。工作区入口用文件夹图标取代原来的搜索盒，指针悬停时在轨道右侧浮出一张工作区会话卡片。
 
+## 安装
+
+在 DeepSeek Harness 中执行（`web` 换成你实际使用的 profile 名）：
+
+```sh
+dsh plugin --profile web add github:uitTe/dsh-sidebar-rail
+```
+
+装好后重启 DSH，收起侧边栏即可看到轨道。本插件面向 Windows 桌面端（标题栏模式）；宿主侧无行为，全部效果在浏览器端完成，不发网络请求。
+
+Install: run `dsh plugin --profile web add github:uitTe/dsh-sidebar-rail` in DeepSeek Harness, then restart. Windows desktop (titlebar mode) only.
+
 ## 宿主的行为与本插件的位置
 
 DSH 桌面端的界面由若干客户端插件拼成，本插件挂在这些插件之外，通过覆盖样式与改写外框列宽改变收起态外观，不替换宿主组件。
