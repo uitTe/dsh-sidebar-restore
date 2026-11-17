@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Sidebar icon rail",
+    "description": "Keeps a 56px icon rail when the sidebar collapses, so panels, New Session, and Settings stay one click away."
+  }
+}

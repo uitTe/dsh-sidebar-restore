@@ -1,0 +1,29 @@
+{
+  "name": "@local/dsh-sidebar-rail",
+  "version": "1.0.6",
+  "private": true,
+  "description": "Windows 桌面端：收起侧边栏后保留一条 56px 图标轨道，而不是整列隐藏",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}
