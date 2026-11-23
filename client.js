@@ -172,6 +172,19 @@ window.__ModuleLoader__.load({
         border-radius: var(--dsw-radius-md) !important;
       }
 
+      /* 新建会话的底色再加一道保险：行盒子本身、以及按钮的悬停/聚焦态
+         在轨道里都不许带底色——宽态的 elevated 底色或 hover 洗色一旦
+         漏进来，图标背后就会留下一块方形色块（1.1.1 实机反馈）。 */
+      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_newSessionRow"] {
+        background: transparent !important;
+      }
+
+      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] button[class*="_newSession"]:hover,
+      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] button[class*="_newSession"]:focus-visible {
+        background: transparent !important;
+        background-color: transparent !important;
+      }
+
       /* 轨道里图标之间不留间隔：宿主收起态给面板列表设了 12px 行距，新建会话与面板列表
          之间也有 12px，这里一律归零，竖条按等距排布 */
       html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_panelList"],
@@ -279,6 +292,43 @@ window.__ModuleLoader__.load({
 
       html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_footerActions"] [class*="_badgeLabel"],
       html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_footerActions"] [class*="_badgeCount"] {
+        display: none !important;
+      }
+
+      /* 兼容 @luoshuizhiwei/dsh-desktop-restart 的底部「重启」行：它自己的轨道
+         样式写的是 [data-rail=1] 这种无引号数字属性选择器——无效选择器，
+         浏览器会把整条规则丢弃，于是宽态整行（42px 高、图标加文字）原样
+         漏进 56px 轨道，文字被切掉一半。这里按它本来的设计（36px 圆形、
+         只留图标）在轨道态替它收好；停靠态不命中本规则，整行照常显示。 */
+      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_footerActions"] .dshdr-foot {
+        width: ${BUTTON}px !important;
+        height: ${BUTTON}px !important;
+        margin: 8px 0 10px !important;
+        flex: none !important;
+      }
+
+      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_footerActions"] .dshdr-foot .dshdr-foot-badge {
+        width: ${BUTTON}px !important;
+        height: ${BUTTON}px !important;
+        padding: 0 !important;
+        gap: 0 !important;
+        border-radius: 50% !important;
+        justify-content: center !important;
+      }
+
+      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_footerActions"] .dshdr-foot .dshdr-foot-label {
+        display: none !important;
+      }
+
+      /* 兼容 @moonsand/dsh-desktop-restart 的底部按钮组：它按宿主 wide 标志
+         决定是否带文字，卡片展开期宿主是宽态，文字会漏进仍只有 56px 的
+         图标列。轨道态一律只留图标，两个按钮竖排。 */
+      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_footerActions"] .dsr-group {
+        flex-direction: column !important;
+        gap: 2px !important;
+      }
+
+      html[data-windows-titlebar] ${RAIL_STATE} > [class*="_sidebarCol"] [class*="_footerActions"] .dsr-text {
         display: none !important;
       }
 
