@@ -6,7 +6,13 @@ Windows 桌面端收起侧边栏后，布局把首列轨道算成 `0px`，整列
 
 ## 安装
 
-本插件面向 Windows 桌面端（标题栏模式），桌面端的 profile 名为 `desktop`。先在桌面端的「应用」菜单里点「Manage dsh Command / 管理 dsh 命令」启用 `dsh` 命令（`desktop` profile 由桌面端独占管理，只有这样装出来的 `dsh` 才能操作它），然后执行：
+本插件面向 Windows 桌面端（标题栏模式），桌面端的 profile 名为 `desktop`。先在桌面端的「应用」菜单里点「Manage dsh Command / 管理 dsh 命令」启用 `dsh` 命令（`desktop` profile 由桌面端独占管理，只有这样装出来的 `dsh` 才能操作它），然后执行（推荐从 npm 安装，预构建、无需本地构建）：
+
+```sh
+dsh plugin --profile desktop add @shuf/dsh-sidebar-restore
+```
+
+也可以从 GitHub 安装（首次安装会要求批准构建脚本，按提示放行后重试即可）：
 
 ```sh
 dsh plugin --profile desktop add github:uitTe/dsh-sidebar-restore
@@ -14,7 +20,7 @@ dsh plugin --profile desktop add github:uitTe/dsh-sidebar-restore
 
 装好后重启桌面端，收起侧边栏即可看到轨道。宿主侧无行为，全部效果在浏览器端完成，不发网络请求。
 
-Install (Windows desktop client): enable the `dsh` command from the app's Application menu ("Manage dsh Command"), then run `dsh plugin --profile desktop add github:uitTe/dsh-sidebar-restore` and restart the app.
+Install (Windows desktop client): enable the `dsh` command from the app's Application menu ("Manage dsh Command"), then run `dsh plugin --profile desktop add @shuf/dsh-sidebar-restore` (npm, prebuilt) or `dsh plugin --profile desktop add github:uitTe/dsh-sidebar-restore` (GitHub) and restart the app.
 
 ## 侧边栏设置（1.1.0）
 

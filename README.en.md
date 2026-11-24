@@ -6,7 +6,13 @@ On the Windows desktop client, collapsing the sidebar makes the layout compute t
 
 ## Install
 
-This plugin targets the Windows desktop client (titlebar mode), whose profile is named `desktop`. First enable the `dsh` command from the desktop app's **Application** menu via **Manage dsh Command** (the `desktop` profile is managed exclusively by the Electron app, and only the `dsh` command installed this way can operate on it), then run:
+This plugin targets the Windows desktop client (titlebar mode), whose profile is named `desktop`. First enable the `dsh` command from the desktop app's **Application** menu via **Manage dsh Command** (the `desktop` profile is managed exclusively by the Electron app, and only the `dsh` command installed this way can operate on it), then run (from npm, prebuilt — recommended):
+
+```sh
+dsh plugin --profile desktop add @shuf/dsh-sidebar-restore
+```
+
+Or install from GitHub (the first run asks for allowBuilds approval — follow the hint and retry):
 
 ```sh
 dsh plugin --profile desktop add github:uitTe/dsh-sidebar-restore
