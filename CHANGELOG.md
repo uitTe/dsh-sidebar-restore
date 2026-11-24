@@ -9,6 +9,10 @@
 - 与 dsh-desktop-restart（@luoshuizhiwei）共存时，其侧栏底部「重启」行在收起轨道里撑成宽行、文字被切掉一半：对方插件自己的轨道样式用了无效的无引号属性选择器 `[data-rail=1]`，被浏览器整条丢弃。本插件在轨道态按其原设计替它收成 36px 圆形图标按钮并隐藏文字；停靠态不受影响。顺带处理 @moonsand/dsh-desktop-restart 的底部按钮组在悬浮卡片展开期漏出文字的同类问题。
 - 新建会话图标在轨道态残留一块方形底色：行盒子与按钮悬停/聚焦态的底色在轨道态一并清零，宽态的 elevated 底色与 hover 洗色不再漏进轨道。
 
+### 变更
+
+- npm 包名由 `@uitte/dsh-sidebar-restore` 改为 `@shuf/dsh-sidebar-restore`：首次发布 npm 前统一对外发布名；GitHub 仓库与插件市场 listing 不变，功能与已保存的设置不受影响。
+
 ## [1.1.0] - 2026-11-17
 
 ### 新增

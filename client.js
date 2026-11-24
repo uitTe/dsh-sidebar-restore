@@ -28,7 +28,7 @@
  * 时长与阻尼曲线都作用在这条 transform 上，因此可以放心拉长到 460ms 并带轻微越冲。
  */
 window.__ModuleLoader__.load({
-  id: '@uitte/dsh-sidebar-restore',
+  id: '@shuf/dsh-sidebar-restore',
   factory(require) {
     /** 收起后的轨道宽度，与 Web 版 56px 轨道一致。 */
     const RAIL = 56;
@@ -1048,10 +1048,10 @@ window.__ModuleLoader__.load({
         ctx.effect(() => {
           /* 上一次加载留下的入口按钮与样式先清掉：热更新或重复挂载时不会叠加出两个 */
           for (const stale of document.querySelectorAll('[data-rail-workspace-button]')) stale.remove();
-          for (const stale of document.querySelectorAll('style[data-plugin="@uitte/dsh-sidebar-restore"]')) stale.remove();
+          for (const stale of document.querySelectorAll('style[data-plugin="@shuf/dsh-sidebar-restore"]')) stale.remove();
 
           const style = document.createElement('style');
-          style.dataset.plugin = '@uitte/dsh-sidebar-restore';
+          style.dataset.plugin = '@shuf/dsh-sidebar-restore';
           style.textContent = CSS;
           document.head.append(style);
 

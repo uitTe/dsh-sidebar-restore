@@ -63,7 +63,7 @@ None of these values are exposed through Config, slot props or `ctx.layout`, so 
 
 | File | Role |
 | --- | --- |
-| `package.json` | Package name `@uitte/dsh-sidebar-restore`; `dsh.bundle.patch` points at `cordis.patch.yml`; `dsh.client` declares `platform: "web"`, `immediately: true` |
+| `package.json` | Package name `@shuf/dsh-sidebar-restore`; `dsh.bundle.patch` points at `cordis.patch.yml`; `dsh.client` declares `platform: "web"`, `immediately: true` |
 | `cordis.patch.yml` | Inserts one bundle entry with `id: sidebar-rail` |
 | `index.js` | Host half: only an empty `export function apply() {}` |
 | `client.js` | All behavior: style injection, column rewriting, slide animation, entry button, flyout card, settings section |
@@ -98,7 +98,7 @@ None of these values are exposed through Config, slot props or `ctx.layout`, so 
 
 ## Style layer
 
-All styles live in one template string, injected as `<style data-plugin="@uitte/dsh-sidebar-restore">`; any older node with the same name is removed before mounting, so reloading never stacks two copies.
+All styles live in one template string, injected as `<style data-plugin="@shuf/dsh-sidebar-restore">`; any older node with the same name is removed before mounting, so reloading never stacks two copies.
 
 Every rail rule starts with `html[data-windows-titlebar]` plus `RAIL_STATE` and follows the full hierarchy `> [class*="_sidebarCol"] > [data-slot="sidebar"] > [class*="_root"]`. The full path matters: the `_root` suffix is reused by several packages inside the same sidebar, and a bare `[class*="_root"]` would also match other packages' roots inside the panel list.
 
